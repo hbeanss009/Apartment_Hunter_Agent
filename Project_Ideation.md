@@ -7,7 +7,7 @@ This would done in 3 steps - discover, analyse and recommend listings to the use
 Q3. Do I want to use agents for all three steps? 
 
 1. Discover (first step) - workflow 
-Not really, then first step of the process discovery is a deterministic, there is a defined output and sequence of steps it can just be automated to be a workflow. 
+The first step of the process discovery is a deterministic, there is a defined output and sequence of steps it can just be automated to be a workflow. 
 
 2. Analyse (second step) - agent 
 Analysing the listings involves a bit of non-deterministic and deterministic tasks and will likley need an agent. 
