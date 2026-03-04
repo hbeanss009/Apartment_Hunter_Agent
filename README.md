@@ -6,7 +6,7 @@ recommend a list of apartments to the user.
 
 This would done in 3 steps - discover, analyse and recommend listings to the user.
 
-Do I want to use agents for all three steps? Not really
+
 
 1. Discover (first step) - workflow
 
