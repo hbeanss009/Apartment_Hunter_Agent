@@ -16,7 +16,7 @@ async def stealth_async(page):
     )
 
 
-async def scrape_trulia_94103(headless=False, max_listings=300):
+async def scrape_trulia_94103(headless=False):
     async with async_playwright() as p:
         # 1. Launch browser: try Chromium first, then system Chrome if needed
         try:
@@ -78,6 +78,7 @@ async def scrape_trulia_94103(headless=False, max_listings=300):
         listings = []
         seen_urls = set()
         page_index = 1
+        max_listings = 300
         prev_count = 0
 
         while True:
@@ -129,7 +130,7 @@ async def scrape_trulia_94103(headless=False, max_listings=300):
                         baths_elem = await card.query_selector("[class*='bath']")
                     baths = (await baths_elem.inner_text()).strip() if baths_elem else "N/A"
 
-                    # Always try to capture the listing URL (multiple strategies)
+                    # Try to capture the listing URL for optional detail-page scraping
                     detail_url = None
                     try:
                         link_elem = await card.query_selector("a[href*='/p/']")
@@ -137,24 +138,10 @@ async def scrape_trulia_94103(headless=False, max_listings=300):
                             href = await link_elem.get_attribute("href")
                             if href:
                                 detail_url = href if href.startswith("http") else f"https://www.trulia.com{href}"
-                        if not detail_url:
-                            # Card might be wrapped in <a> or link might be elsewhere in card
-                            detail_url = await card.evaluate(
-                                """el => {
-                                    const a = el.closest('a[href*="/p/"]') || el.querySelector('a[href*="/p/"]');
-                                    if (!a || !a.href) return '';
-                                    return a.href;
-                                }"""
-                            )
-                        if not detail_url and address_elem:
-                            href = await address_elem.get_attribute("href")
-                            if href:
-                                detail_url = href if href.startswith("http") else f"https://www.trulia.com{href}"
                     except Exception:
                         detail_url = None
-                    detail_url = (detail_url or "").strip() or None
 
-                    # Skip duplicates based on detail URL (only if we have a URL)
+                    # Skip duplicates based on detail URL
                     if detail_url and detail_url in seen_urls:
                         continue
                     if detail_url:
@@ -194,7 +181,6 @@ async def scrape_trulia_94103(headless=False, max_listings=300):
 
                     # Only add if we got at least price or address (avoid empty rows)
                     if price != "N/A" or address != "N/A":
-                        listing_url = detail_url or ""
                         listings.append({
                             "Zip_Code": "94103",
                             "Price": price,
@@ -204,8 +190,7 @@ async def scrape_trulia_94103(headless=False, max_listings=300):
                             "Amenities": ", ".join(amenities),
                             "Photo_URL": photo_url or "No Image",
                             "Address": address,
-                            "Detail_URL": listing_url,
-                            "URL": listing_url,
+                            "Detail_URL": detail_url or ""
                         })
                 except Exception:
                     continue
@@ -232,13 +217,7 @@ async def scrape_trulia_94103(headless=False, max_listings=300):
         return pd.DataFrame(listings)
 
 if __name__ == "__main__":
-    import sys
-    n = 300
-    if "--limit" in sys.argv:
-        i = sys.argv.index("--limit")
-        if i + 1 < len(sys.argv):
-            n = int(sys.argv[i + 1])
-    df = asyncio.run(scrape_trulia_94103(max_listings=n))
+    df = asyncio.run(scrape_trulia_94103())
     print(f"\nScraped {len(df)} listings. First few rows:")
     print(df.head())
     df.to_csv("trulia.csv", index=False)

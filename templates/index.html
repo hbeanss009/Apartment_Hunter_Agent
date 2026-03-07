@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Apartment Hunter</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 2rem 1rem;
+      color: #1a1a1a;
+      background: #f8f9fa;
+    }
+    h1 {
+      font-size: 1.75rem;
+      margin-bottom: 0.5rem;
+      color: #0d3b66;
+    }
+    .subtitle {
+      color: #5c6b73;
+      margin-bottom: 1.5rem;
+    }
+    label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      color: #2d3748;
+    }
+    textarea {
+      width: 100%;
+      min-height: 140px;
+      padding: 0.75rem 1rem;
+      border: 1px solid #cbd5e0;
+      border-radius: 8px;
+      font-size: 1rem;
+      resize: vertical;
+      font-family: inherit;
+    }
+    textarea:focus {
+      outline: none;
+      border-color: #0d3b66;
+      box-shadow: 0 0 0 3px rgba(13, 59, 102, 0.15);
+    }
+    .hint {
+      font-size: 0.875rem;
+      color: #718096;
+      margin-top: 0.5rem;
+      margin-bottom: 1rem;
+    }
+    .btn {
+      display: inline-block;
+      padding: 0.75rem 1.5rem;
+      font-size: 1rem;
+      font-weight: 600;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.05s;
+    }
+    .btn:active:not(:disabled) { transform: scale(0.98); }
+    .btn-primary {
+      background: #0d3b66;
+      color: #fff;
+    }
+    .btn-primary:hover:not(:disabled) {
+      background: #0a2d4d;
+    }
+    .btn-primary:disabled {
+      background: #a0aec0;
+      color: #e2e8f0;
+      cursor: not-allowed;
+    }
+    .btn-secondary {
+      background: #4a5568;
+      color: #fff;
+      margin-top: 1rem;
+    }
+    .btn-secondary:hover:not(:disabled) { background: #2d3748; }
+    .btn-secondary:disabled {
+      background: #a0aec0;
+      color: #e2e8f0;
+      cursor: not-allowed;
+    }
+    .results-actions { margin-top: 1rem; }
+    .loading {
+      display: none;
+      margin-top: 1rem;
+      color: #5c6b73;
+      font-size: 0.95rem;
+    }
+    .loading.visible { display: block; }
+    .results {
+      margin-top: 2rem;
+      padding: 1.25rem;
+      background: #fff;
+      border-radius: 10px;
+      border: 1px solid #e2e8f0;
+      white-space: pre-wrap;
+      font-size: 0.95rem;
+      line-height: 1.6;
+    }
+    .results:empty { display: none; }
+    .results a {
+      color: #0d3b66;
+      text-decoration: underline;
+      word-break: break-all;
+    }
+    .results a:hover { color: #0a2d4d; }
+    .results .result-photo {
+      display: block;
+      max-width: 100%;
+      height: auto;
+      max-height: 280px;
+      object-fit: contain;
+      border-radius: 8px;
+      margin: 0.5rem 0 1rem 0;
+      border: 1px solid #e2e8f0;
+    }
+    .error {
+      background: #fff5f5;
+      border-color: #feb2b2;
+      color: #c53030;
+    }
+    .follow-up {
+      margin-top: 1.5rem;
+      padding-top: 1.25rem;
+      border-top: 1px solid #e2e8f0;
+    }
+    .follow-up h3 { font-size: 1rem; margin-bottom: 0.75rem; color: #2d3748; }
+    .follow-up-buttons { display: flex; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 1rem; }
+    .refine-form { display: none; margin-top: 1rem; }
+    .refine-form.visible { display: block; }
+    .refine-form textarea { min-height: 80px; }
+    .thank-you { display: none; color: #276749; font-weight: 500; margin-top: 0.5rem; }
+    .thank-you.visible { display: block; }
+  </style>
+</head>
+<body>
+  <h1>Apartment Hunter</h1>
+  <p class="subtitle">Describe the kind of apartment you're looking for and we'll find and rank matches for you.</p>
+
+  <form id="search-form">
+    <label for="description">What kind of apartment are you looking for?</label>
+    <textarea
+      id="description"
+      name="description"
+      placeholder="e.g. 2-bed in Mission or Hayes Valley, SF, under $3500, must have laundry and dishwasher, pet-friendly would be nice"
+      required
+    ></textarea>
+    <p class="hint">Include neighbourhoods, min bedrooms/bathrooms, budget range, and must-have or nice-to-have amenities for best results.</p>
+    <button type="submit" class="btn btn-primary" id="find-btn">Find Apartments</button>
+  </form>
+
+  <p class="loading" id="loading">Searching listings and ranking recommendations… This may take a few minutes.</p>
+
+  <div class="results-actions" id="results-actions" style="display: none;">
+    <button type="button" class="btn btn-secondary" id="recommend-again-btn">Run recommend again</button>
+  </div>
+  <p class="loading" id="recommend-loading" style="display: none;">Re-ranking recommendations…</p>
+
+  <div class="results" id="results"></div>
+
+  <div class="follow-up" id="follow-up" style="display: none;">
+    <h3>Are you happy with these results, or would you like to change your criteria or add additional requirements?</h3>
+    <div class="follow-up-buttons">
+      <button type="button" class="btn btn-primary" id="happy-btn">Yes, I'm happy with these results</button>
+      <button type="button" class="btn btn-secondary" id="refine-btn">No, I want to refine my search</button>
+    </div>
+    <p class="thank-you" id="thank-you">Thanks for using Apartment Hunter!</p>
+    <div class="refine-form" id="refine-form">
+      <label for="additional-criteria">What additional criteria are you looking for?</label>
+      <textarea id="additional-criteria" name="additional_criteria" placeholder="e.g. must have parking, prefer ground floor..."></textarea>
+      <button type="button" class="btn btn-primary" id="search-again-btn" style="margin-top: 0.5rem;">Search again</button>
+    </div>
+  </div>
+  <p class="loading" id="refine-loading" style="display: none;">Searching with your updated criteria…</p>
+
+  <script>
+    function escapeHtml(s) {
+      const div = document.createElement('div');
+      div.textContent = s;
+      return div.innerHTML;
+    }
+
+    function formatRecommendations(text) {
+      if (!text) return '';
+      const urlRegex = /https?:\/\/[^\s<>"']+/g;
+      const imageExtRegex = /\.(jpe?g|png|gif|webp)(\?[^'"\s]*)?$/i;
+      let lastIndex = 0;
+      let html = '';
+      let match;
+      while ((match = urlRegex.exec(text)) !== null) {
+        html += escapeHtml(text.slice(lastIndex, match.index));
+        const url = match[0];
+        const safeUrl = escapeHtml(url);
+        if (imageExtRegex.test(url)) {
+          html += '<img src="' + safeUrl + '" alt="Listing photo" class="result-photo" loading="lazy" />';
+        } else {
+          html += '<a href="' + safeUrl + '" target="_blank" rel="noopener noreferrer">' + safeUrl + '</a>';
+        }
+        lastIndex = urlRegex.lastIndex;
+      }
+      html += escapeHtml(text.slice(lastIndex));
+      return html.replace(/\n/g, '<br>');
+    }
+
+    const form = document.getElementById('search-form');
+    const description = document.getElementById('description');
+    const findBtn = document.getElementById('find-btn');
+    const loading = document.getElementById('loading');
+    const resultsEl = document.getElementById('results');
+    const resultsActions = document.getElementById('results-actions');
+    const recommendAgainBtn = document.getElementById('recommend-again-btn');
+    const recommendLoading = document.getElementById('recommend-loading');
+    const followUp = document.getElementById('follow-up');
+    const happyBtn = document.getElementById('happy-btn');
+    const refineBtn = document.getElementById('refine-btn');
+    const thankYou = document.getElementById('thank-you');
+    const refineForm = document.getElementById('refine-form');
+    const additionalCriteria = document.getElementById('additional-criteria');
+    const searchAgainBtn = document.getElementById('search-again-btn');
+    const refineLoading = document.getElementById('refine-loading');
+
+    function showResults(data, isError, showFollowUp) {
+      if (data.error) {
+        resultsEl.textContent = data.error;
+        resultsEl.classList.add('error');
+        resultsActions.style.display = 'none';
+        followUp.style.display = 'none';
+      } else {
+        const raw = data.recommendations || 'No recommendations returned.';
+        resultsEl.innerHTML = formatRecommendations(raw);
+        resultsEl.classList.remove('error');
+        resultsActions.style.display = 'block';
+        if (showFollowUp !== false) {
+          followUp.style.display = 'block';
+          thankYou.classList.remove('visible');
+          refineForm.classList.remove('visible');
+        } else {
+          followUp.style.display = 'none';
+        }
+      }
+    }
+
+    form.addEventListener('submit', async function (e) {
+      e.preventDefault();
+      const text = (description.value || '').trim();
+      if (!text) return;
+
+      findBtn.disabled = true;
+      findBtn.textContent = 'Finding…';
+      loading.classList.add('visible');
+      resultsEl.textContent = '';
+      resultsEl.classList.remove('error');
+      resultsActions.style.display = 'none';
+      followUp.style.display = 'none';
+
+      try {
+        const res = await fetch('/search', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ description: text })
+        });
+        const data = await res.json();
+        showResults(data, !!data.error, true);
+      } catch (err) {
+        resultsEl.textContent = 'Request failed: ' + (err.message || 'Unknown error');
+        resultsEl.classList.add('error');
+        resultsActions.style.display = 'none';
+        followUp.style.display = 'none';
+      } finally {
+        loading.classList.remove('visible');
+        findBtn.textContent = 'Find Apartments';
+        findBtn.disabled = true;
+      }
+    });
+
+    recommendAgainBtn.addEventListener('click', async function () {
+      recommendAgainBtn.disabled = true;
+      recommendLoading.style.display = 'block';
+      resultsEl.textContent = '';
+      resultsEl.classList.remove('error');
+      try {
+        const res = await fetch('/recommend', { method: 'POST' });
+        const data = await res.json();
+        showResults(data, !!data.error, true);
+      } catch (err) {
+        resultsEl.textContent = 'Request failed: ' + (err.message || 'Unknown error');
+        resultsEl.classList.add('error');
+      } finally {
+        recommendLoading.style.display = 'none';
+        recommendAgainBtn.disabled = false;
+      }
+    });
+
+    happyBtn.addEventListener('click', function () {
+      thankYou.classList.add('visible');
+      refineForm.classList.remove('visible');
+      refineForm.querySelector('textarea').value = '';
+      document.querySelector('.follow-up-buttons').style.display = 'none';
+    });
+
+    refineBtn.addEventListener('click', function () {
+      refineForm.classList.add('visible');
+    });
+
+    searchAgainBtn.addEventListener('click', async function () {
+      const extra = (additionalCriteria.value || '').trim();
+      if (!extra) return;
+      searchAgainBtn.disabled = true;
+      refineLoading.style.display = 'block';
+      resultsEl.textContent = '';
+      resultsEl.classList.remove('error');
+      try {
+        const res = await fetch('/refine', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ additional_criteria: extra })
+        });
+        const data = await res.json();
+        showResults(data, !!data.error, true);
+        additionalCriteria.value = '';
+        refineForm.classList.remove('visible');
+      } catch (err) {
+        resultsEl.textContent = 'Request failed: ' + (err.message || 'Unknown error');
+        resultsEl.classList.add('error');
+      } finally {
+        refineLoading.style.display = 'none';
+        searchAgainBtn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

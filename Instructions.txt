@@ -1,0 +1,9 @@
+This is going to work the following way - 
+
+1. Ask the user for a list of neighbourhoods they are interested/want to live in. 
+2. Ask user to enter the minimum number of bedrooms they're looking for. 
+3. Ask user to enter the min. number of bathrooms they want. 
+4. Ask user to enter the maximum budget for the apartment/home you're willing to pay. 
+5. Ask user to enter any amenities/facilities that they think are must have.
+6. Ask user to enter any amenities/facilities that are nice to have. 
+

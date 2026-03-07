@@ -1,10 +1,8 @@
-import json
-import re
-import time
-from urllib.parse import urlparse
-
-import pandas as pd
 import requests
+import pandas as pd
+import time
+import re
+import json
 from bs4 import BeautifulSoup
 from typing import Dict, Optional
 
@@ -31,19 +29,7 @@ def get_post_details(post_url: str, default_neighborhood: Optional[str] = None) 
         body_el = inner_soup.find("section", id="postingbody")
         body_text = body_el.get_text(separator=" ", strip=True) if body_el else ""
         full_blob = f"{title_text} {attr_text} {body_text}"
-
-        # Normalize some word numbers (e.g. "two bathrooms" -> "2 bathrooms")
         full_blob_lower = full_blob.lower()
-        word_to_num = {
-            "one": "1",
-            "two": "2",
-            "three": "3",
-            "four": "4",
-            "five": "5",
-            "six": "6",
-        }
-        for w, d in word_to_num.items():
-            full_blob_lower = re.sub(rf"\b{w}\b", d, full_blob_lower)
 
         # --- 2. EXTRACTION (body-first: many listings use "Beds: 1 Baths: 1 Square Feet: 732") ---
         # Price: try sidebar span.price first (many listings put it only there), then title/blob
@@ -61,11 +47,10 @@ def get_post_details(post_url: str, default_neighborhood: Optional[str] = None) 
             re.search(r'Beds?:\s*(\d+)', full_blob, re.I)
             or re.search(r'(\d+)\s*(?:br|bedroom|bed|beds)\b', full_blob_lower)
         )
-        # Baths: explicit "Baths: N" or "N ba / bath / bathroom", including "1 full bath", "1 1/2 bath"
+        # Baths: explicit "Baths: N" or "N ba / bath / bathroom"
         baths_match = (
             re.search(r'Baths?:\s*([\d.]+)', full_blob, re.I)
-            or re.search(r'([\d.]+)\s*(?:full|half)?\s*bath(?:room)?s?\b', full_blob_lower)
-            or re.search(r'(\d+)\s*(?:and a half|½)\s*bath', full_blob_lower)
+            or re.search(r'([\d.]+)\s*(?:ba|bath|baths|bathroom|bathrooms)\b', full_blob_lower)
         )
         # Sqft: "Square Feet: N" or "N square feet" or "N sqft / ft"
         sqft_match = (
@@ -126,15 +111,7 @@ def get_post_details(post_url: str, default_neighborhood: Optional[str] = None) 
         # Neighborhood: parentheses in title or common SF neighborhood names
         hood_match = re.search(r'\((.*?)\)', title_text)
 
-        # --- 3. LAT/LON & ADDRESS EXTRACTION ---
-        # Primary source: map element data-latitude / data-longitude
-        lat_val = lon_val = None
-        map_el = inner_soup.find(attrs={"data-latitude": True, "data-longitude": True})
-        if map_el:
-            lat_val = map_el.get("data-latitude")
-            lon_val = map_el.get("data-longitude")
-
-        # --- 3b. AMENITIES EXTRACTION ---
+        # --- 3. AMENITIES EXTRACTION ---
         # Merge sidebar tags and list items from the description
         amenities_list = []
         
@@ -148,63 +125,11 @@ def get_post_details(post_url: str, default_neighborhood: Optional[str] = None) 
         body_amenities = re.findall(r'[•\-]\s*([^\n•\-]+)', body_text)
         amenities_list.extend([a.strip() for a in body_amenities if len(a) < 100])
 
-        # Neighborhood and address
         neighborhood_val = hood_match.group(1).strip() if hood_match else None
         if not neighborhood_val and default_neighborhood:
             neighborhood_val = default_neighborhood.strip()
         if not neighborhood_val:
             neighborhood_val = "San Francisco"  # final fallback so it is never empty
-
-        # Address from JSON-LD if available
-        address_val = None
-        try:
-            for script in inner_soup.find_all("script", type="application/ld+json"):
-                raw = script.string or ""
-                if not raw.strip():
-                    continue
-                data = json.loads(raw)
-                objs = data if isinstance(data, list) else [data]
-                for obj in objs:
-                    if not isinstance(obj, dict):
-                        continue
-                    addr = obj.get("address")
-                    if isinstance(addr, dict):
-                        parts = [
-                            addr.get("streetAddress"),
-                            addr.get("addressLocality"),
-                            addr.get("addressRegion"),
-                            addr.get("postalCode"),
-                        ]
-                        addr_str = ", ".join([p for p in parts if p])
-                        if addr_str:
-                            address_val = addr_str
-                    # Lat/lon can also appear in JSON-LD
-                    if lat_val is None:
-                        v = obj.get("latitude") or obj.get("geo", {}).get("latitude")
-                        if isinstance(v, (int, float, str)):
-                            lat_val = str(v)
-                    if lon_val is None:
-                        v = obj.get("longitude") or obj.get("geo", {}).get("longitude")
-                        if isinstance(v, (int, float, str)):
-                            lon_val = str(v)
-                if address_val and lat_val and lon_val:
-                    break
-        except Exception:
-            pass
-
-        # Fallback: meta geo.position tag "lat;lon"
-        if (lat_val is None or lon_val is None) and inner_soup.find(
-            "meta", attrs={"name": "geo.position"}
-        ):
-            try:
-                content = inner_soup.find("meta", attrs={"name": "geo.position"}).get(
-                    "content", ""
-                )
-                lat_s, lon_s = [c.strip() for c in content.split(";", 1)]
-                lat_val = lat_val or lat_s
-                lon_val = lon_val or lon_s
-            except Exception:
-                pass
 
         return {
             "Price": price_val,
@@ -212,9 +137,6 @@ def get_post_details(post_url: str, default_neighborhood: Optional[str] = None) 
             "Baths": baths_val or "N/A",
             "Sqft": sqft_val or "N/A",
             "Neighborhood": neighborhood_val,
-            "Latitude": lat_val or "",
-            "Longitude": lon_val or "",
-            "Address": address_val or "",
             "Amenities": ", ".join(list(set(amenities_list))),  # set() removes duplicates
             "URL": post_url,
         }
@@ -222,36 +144,19 @@ def get_post_details(post_url: str, default_neighborhood: Optional[str] = None) 
         print(f"Error scraping {post_url}: {e}")
         return {}
 
-def _normalize_listing_url(href: str, base: str = "https://sfbay.craigslist.org") -> str:
-    """Ensure listing URL is always absolute."""
-    if not href or not href.strip():
-        return ""
-    href = href.strip()
-    if href.startswith("http://") or href.startswith("https://"):
-        return href
-    if href.startswith("/"):
-        return base.rstrip("/") + href
-    return base.rstrip("/") + "/" + href
-
-
-def run_scraper(search_url: str, max_posts: int = 400):
+def run_scraper(search_url: str, max_posts: int = 10):
     response = requests.get(search_url, headers=HEADERS, timeout=10)
     soup = BeautifulSoup(response.content, "html.parser")
-    # Base URL for normalizing relative listing links
-    parsed = urlparse(search_url)
-    base = f"{parsed.scheme}://{parsed.netloc}" if parsed.netloc else "https://sfbay.craigslist.org"
     # Targets the modern Craigslist search result structure
     posts = soup.find_all("li", class_="cl-static-search-result")
-    to_process = posts[:max_posts]
-
+    
     results = []
-    for post in to_process:
+    for post in posts[:max_posts]:
         link = post.find("a")
         if not (link and link.get("href")):
             continue
 
         href = link.get("href")
-        listing_url = _normalize_listing_url(href, base)
 
         # Neighborhood from search results row if available
         hood_el = (
@@ -261,26 +166,11 @@ def run_scraper(search_url: str, max_posts: int = 400):
         )
         neighborhood = hood_el.get_text(strip=True) if hood_el else ""
 
-        print(f"Processing: {listing_url or href}")
-        details = get_post_details(listing_url or href, default_neighborhood=neighborhood)
+        print(f"Processing: {href}")
+        details = get_post_details(href, default_neighborhood=neighborhood)
         if details:
-            details["URL"] = listing_url or details.get("URL") or href
             results.append(details)
-        else:
-            # Include listing URL in search results even when detail scrape fails
-            results.append({
-                "Price": "N/A",
-                "Beds": "N/A",
-                "Baths": "N/A",
-                "Sqft": "N/A",
-                "Neighborhood": neighborhood or "N/A",
-                "Latitude": "",
-                "Longitude": "",
-                "Address": "",
-                "Amenities": "",
-                "URL": listing_url or href,
-            })
-        time.sleep(0.4)  # Short delay to avoid hammering the server
+        time.sleep(1)  # Be polite to the server
             
     df = pd.DataFrame(results)
     df.to_csv("craigslist_full_details.csv", index=False)
@@ -288,8 +178,6 @@ def run_scraper(search_url: str, max_posts: int = 400):
     return df
 
 if __name__ == "__main__":
-    import os
-    # Allow limiting posts via env (e.g. CRAIGSLIST_MAX_POSTS=50)
-    max_posts = int(os.environ.get("CRAIGSLIST_MAX_POSTS", "50"))
+    # Example URL for San Francisco Apartments
     TARGET_URL = "https://sfbay.craigslist.org/search/sfc/apa"
-    run_scraper(TARGET_URL, max_posts=max_posts)
+    run_scraper(TARGET_URL, max_posts=10)

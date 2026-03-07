@@ -4,6 +4,3 @@ pandas
 playwright
 playwright-stealth
 python-dotenv
-langchain-core
-langchain-google-genai
-flask

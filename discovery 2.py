@@ -1,10 +1,8 @@
 # This file coordinates discovery and aggregates results from all scrapers.
-import os
-from pathlib import Path
 from typing import Dict
-
-import pandas as pd
+from pathlib import Path
 import subprocess
+import pandas as pd
 
 
 def run_discovery() -> Dict[str, pd.DataFrame]:
@@ -33,16 +31,15 @@ def run_discovery() -> Dict[str, pd.DataFrame]:
 
     # Run each scraper; they handle their own CSV writing.
     _run_script("craigslist.py")
-    if os.environ.get("DISCOVERY_SKIP_TRULIA") != "1":
-        _run_script("trulia.py")
-    # _run_script("zillow.py")
+    _run_script("trulia.py")
+    _run_script("zillow.py")
 
     # Load CSVs back into DataFrames (empty DataFrame if a CSV is missing).
     outputs: Dict[str, pd.DataFrame] = {}
     mapping = {
         "craigslist": "craigslist.csv",
         "trulia": "trulia.csv",
-       # "zillow": "zillow_results.csv",
+        "zillow": "zillow_results.csv",
     }
 
     for key, filename in mapping.items():

@@ -111,8 +111,15 @@ def get_matching_apartments(
 
 
 if __name__ == "__main__":
-    
-    result = get_matching_apartments(user_preferences)
+    sample_preferences = [
+        "SOMA, Mission, Downtown, Tenderloin, Financial District, SoMa, South of Market, marina, alamo square, Tenderloin, Financial District",
+        "1",
+        "1",
+        "$1000 - $7000",
+        "parking",
+        "",
+    ]
+    result = get_matching_apartments(sample_preferences)
     print("\nMatching apartments:")
     if not result or not result.strip():
         print("No matching apartments were found for the sample criteria or the model returned an empty response.")

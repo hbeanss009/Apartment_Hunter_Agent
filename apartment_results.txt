@@ -1,0 +1,25 @@
+I've searched through the provided listings for apartments in the "Mission" neighborhood with at least 2 bedrooms and 1 bathroom, within your budget of $0-$5000, and ideally with a washer-dryer.
+
+**Important Note on "Mission" Neighborhood:**
+The listing data does not explicitly contain a "Mission District" neighborhood label. However, several listings include "Mission Street" in their address. For the purpose of this search, I have included listings located on "Mission Street" as a plausible match for the "Mission" neighborhood, with a clear note on their specific location. Please be aware that the addresses found (e.g., 1401 Mission Street, San Francisco, CA 94142) are often considered to be in the Mid-Market or Civic Center area, which is on the northern edge of the broader Mission District.
+
+**Washer-Dryer Amenity:**
+The "Amenities" fields in the provided data are often sparse or contain unrelated information. For the matching listings, the presence of a washer-dryer could not be definitively confirmed and is noted as "Unknown."
+
+Based on your criteria and the available data, here is the best match found:
+
+---
+
+1.  **1401 Mission Street**
+    *   **Source:** Craigslist
+    *   **Price:** $4,379
+    *   **Beds:** 2.0
+    *   **Baths:** 1.0
+    *   **Neighborhood:** Mid-Market (Inferred: Located on Mission Street, which runs through the Mission District, though this specific address is often considered Mid-Market/Civic Center.)
+    *   **Amenities:** Washer-dryer (Inferred: Unknown, not explicitly mentioned in the listing details or description.)
+    *   **URL:** https://sfbay.craigslist.org/sfc/apa/d/san-francisco-stainless-steel/7919616888.html
+
+---
+
+**Summary of Search Results:**
+Only one unique listing met the minimum bedroom, bathroom, and budget requirements, and was located on "Mission Street" (as a plausible match for "Mission" neighborhood). The must-have amenity (washer-dryer) could not be confirmed from the listing details for this property. No other listings in the provided data set met all specified criteria.
